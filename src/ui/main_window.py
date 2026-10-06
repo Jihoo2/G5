@@ -1,5 +1,7 @@
+"""기본 화면 구성과 이미지 폴더 열기."""
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, filedialog, messagebox
+from src.workspace.images import list_images, load_image
 from configs import settings as C
 from src.ui.theme import FONTS
 from src.ui.widgets import ScrollableFrame, ToggleSwitch, Tooltip, make_card
@@ -9,6 +11,10 @@ from src.ui.thumbnails import ThumbnailStrip
 class LabelingApp:
     def __init__(self, root: tk.Tk):
         self.root = root
+        self.folder = None
+        self.image_names = []
+        self.image = None
+        self.cur = -1
         self.user_name = ""
         self.role = C.ROLE_WORKER
         self.status_var = tk.StringVar(master=root, value="")
@@ -17,6 +23,8 @@ class LabelingApp:
         self.reviewer_var = tk.StringVar(master=root, value="")
         self.warn_unsaved = tk.BooleanVar(master=root, value=True)
         self._build_window()
+        root.bind("<Control-o>", self.open_folder)
+        root.bind("<Control-O>", self.open_folder)
         self.class_combo.current(0)
         row, swatch, label, key, color, enabled = self.class_rows[C.ENABLED_CLASSES[0]]
         for widget in (row, label, key):
@@ -58,12 +66,12 @@ class LabelingApp:
         bar.grid(row=0, column=0, sticky='ew', padx=8, pady=8)
     
         def btn(parent, text, cmd=None, tip=None):
-            b = ttk.Button(parent, text=text, style='Tool.TButton')
+            b = ttk.Button(parent, text=text, command=cmd, style='Tool.TButton')
             b.pack(side='left', padx=3, pady=6)
             if tip:
                 Tooltip(b, tip)
             return b
-        btn(bar, '폴더 열기', None, '작업할 이미지 폴더 선택 (Ctrl+O)')
+        btn(bar, '폴더 열기', self.open_folder, '작업할 이미지 폴더 선택 (Ctrl+O)')
         btn(bar, '저장', None, 'YOLO TXT + CSV 상태 저장 (Ctrl+S)')
         btn(bar, '저장 후 다음', None, '저장하고 다음 이미지로 (Ctrl+Enter)')
         btn(bar, '← 이전', None, '이전 이미지 (← / A)')
@@ -211,3 +219,37 @@ class LabelingApp:
         tk.Label(sb, text=f'{C.ROLE_LABELS[self.role]}: {self.user_name}', bg=C.COLOR_PANEL, fg=C.COLOR_TEXT, font=FONTS['small']).pack(side='right', padx=8)
         self.dirty_lbl = tk.Label(sb, text='', bg=C.COLOR_PANEL, fg=C.COLOR_DANGER, font=FONTS['bold'])
         self.dirty_lbl.pack(side='right', padx=8)
+
+    def open_folder(self, event=None):
+        folder = filedialog.askdirectory(
+            parent=self.root, title="JPG 이미지 폴더 선택",
+            initialdir=self.folder or ".",
+        )
+        if not folder:
+            return
+        try:
+            paths = list_images(folder)
+        except OSError as exc:
+            messagebox.showerror("폴더 오류", str(exc), parent=self.root)
+            return
+        if not paths:
+            messagebox.showwarning("이미지 없음", "폴더에 JPG 또는 JPEG 파일이 없습니다.", parent=self.root)
+            return
+        try:
+            image = load_image(paths[0])
+        except (OSError, ValueError) as exc:
+            messagebox.showerror("이미지 오류", f"{paths[0].name}을 열 수 없습니다.\n{exc}", parent=self.root)
+            return
+
+        # 폴더와 첫 이미지를 읽은 뒤에만 현재 화면을 변경합니다.
+        self.folder = folder
+        self.image_names = [path.name for path in paths]
+        self.cur = 0
+        self.image = image
+        self.view.set_image(image)
+        self.file_lbl.configure(text=f"파일 이름 :  {paths[0].name}")
+        self.pos_lbl.configure(text=f"진행률  1 / {len(paths)}")
+        self.done_count_lbl.configure(text=f"이미지 0 / {len(paths)}")
+        self.strip_card.title_lbl.configure(text=f"이미지 목록 ({len(paths)}개)")
+        self.thumbs.show_first(image, paths[0].name, len(paths))
+        self.msg_lbl.configure(text=f"{len(paths)}장 발견 · {paths[0].name} · {image.width} × {image.height} px")

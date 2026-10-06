@@ -74,3 +74,5 @@ FONT_CANDIDATES = ["NanumGothic", "NanumBarunGothic", "Noto Sans CJK KR",
                    "Noto Sans KR", "Malgun Gothic", "UnDotum", "DejaVu Sans"]
 
 MONO_CANDIDATES = ["D2Coding", "NanumGothicCoding", "DejaVu Sans Mono", "Monospace"]
+
+IMAGE_EXTS = (".jpg", ".jpeg")

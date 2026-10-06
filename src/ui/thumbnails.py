@@ -1,5 +1,6 @@
-"""이미지 목록의 빈 화면 배치."""
+"""이미지 목록의 첫 이미지 미리보기."""
 import tkinter as tk
+from PIL import Image, ImageTk
 from tkinter import ttk
 from configs import settings as C
 from src.ui.theme import FONTS
@@ -20,3 +21,16 @@ class ThumbnailStrip(tk.Frame):
         self.canvas.create_text(12, (C.THUMB_H + 30) / 2, anchor="w",
                                 text="이미지가 없습니다", fill=C.COLOR_MUTED,
                                 font=FONTS["small"])
+
+    def show_first(self, image, name, count):
+        preview = image.copy()
+        preview.thumbnail((C.THUMB_W, C.THUMB_H), Image.Resampling.LANCZOS)
+        self._photo = ImageTk.PhotoImage(preview, master=self.canvas)
+        self.canvas.delete("all")
+        self.canvas.create_image(12 + C.THUMB_W / 2, 6 + C.THUMB_H / 2,
+                                 image=self._photo)
+        self.canvas.create_text(12, C.THUMB_H + 12, anchor="w", text=name,
+                                 font=FONTS["small"], fill=C.COLOR_TEXT)
+        self.canvas.create_text(C.THUMB_W + 30, 40, anchor="w",
+                                 text=f"총 {count}장 · 첫 이미지 표시",
+                                 font=FONTS["small"], fill=C.COLOR_MUTED)

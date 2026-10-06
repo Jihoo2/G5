@@ -1,3 +1,4 @@
+"""실행: python main.py"""
 import tkinter as tk
 
 from src.ui.main_window import LabelingApp
